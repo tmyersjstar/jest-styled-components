@@ -1,4 +1,5 @@
 const { ServerStyleSheet } = require('styled-components')
+const styleSheet = require('styled-components/lib/models/StyleSheet')
 
 const STYLE_TAGS_REGEXP = /<style[^>]*>([^<]*)</g
 
@@ -26,7 +27,7 @@ function parseCSSfromHTML(html) {
 
 module.exports.parseCSSfromHTML = parseCSSfromHTML
 
-function getCSS(styleSheet) {
+function getCSS() {
   const overV2 = isOverV2()
   if (overV2 && isServer()) {
     return parseCSSfromHTML(new ServerStyleSheet().getStyleTags())
@@ -41,7 +42,7 @@ module.exports.getCSS = getCSS
 function getClassNames(node) {
   const classNames = []
   if (node.children) {
-    node.children.forEach(child => (
+    node.children.reverse().forEach(child => (
       Array.prototype.push.apply(classNames, getClassNames(child))
     ))
   }

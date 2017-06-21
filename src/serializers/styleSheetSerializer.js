@@ -1,8 +1,17 @@
 const css = require('css')
-const styleSheet = require('styled-components/lib/models/StyleSheet')
 const { getCSS, getClassNames } = require('../utils')
 
-const filterNodes = classNames => (rule) => {
+const getComponentIDs = () => {
+  const styles = getCSS()
+  const ast = css.parse(styles)
+  return ast.stylesheet.rules
+    .filter(rule => rule.type === 'comment')
+    .reduce((acc, rule) => acc.concat(rule.comment.split(':')[1].trim()), [])
+}
+
+const excludeComponentIDs = componentIDs => className => !componentIDs.includes(className)
+
+const filterRules = classNames => (rule) => {
   if (rule.type === 'rule') {
     const className = rule.selectors[0].split(/:| /)[0]
     return classNames.includes(className.substring(1)) && rule.declarations.length
@@ -26,16 +35,26 @@ const getAtRules = (ast, filter) => (
 )
 
 const getStyles = (classNames) => {
-  const styles = getCSS(styleSheet)
+  const styles = getCSS()
   const ast = css.parse(styles)
-  const filter = filterNodes(classNames)
+  const filter = filterRules(classNames)
   const rules = ast.stylesheet.rules.filter(filter)
   const mediaQueries = getAtRules(ast, filter)
 
   ast.stylesheet.rules = rules.concat(mediaQueries)
 
-  return css.stringify(ast).trim()
+  return css.stringify(ast)
 }
+
+const replaceClassNames = (classNames, output) => (
+  classNames
+    .reverse()
+    .reduce((acc, selector, index) => acc.replace(new RegExp(selector, 'g'), `c${index}`), output)
+)
+
+const removeComponentIDs = (componentIDs, output) => (
+  componentIDs.reduce((acc, componentID) => acc.replace(`${componentID} `, ''), output)
+)
 
 const styleSheetSerializer = {
 
@@ -44,12 +63,19 @@ const styleSheetSerializer = {
   },
 
   print(val, print) {
-    const classNames = getClassNames(val)
-    const styles = classNames.length ? `${getStyles(classNames)}\n\n` : ''
-
     val.withStyles = true
 
-    return `${styles}${print(val)}`
+    const componentIDs = getComponentIDs()
+    const classNames = getClassNames(val).filter(excludeComponentIDs(componentIDs))
+
+    const styles = classNames.length ? `${getStyles(classNames)}\n\n` : ''
+    const code = print(val)
+    let output = `${styles}${code}`
+
+    output = replaceClassNames(classNames, output)
+    output = removeComponentIDs(componentIDs, output)
+
+    return output
   },
 
 }

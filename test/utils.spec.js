@@ -31,6 +31,6 @@ describe('getClassNames', () => {
       ],
     }
 
-    expect(getClassNames(tree).sort()).toEqual(['A', 'B', 'C'])
+    expect(getClassNames(tree)).toEqual(['C', 'B', 'A'])
   })
 })
